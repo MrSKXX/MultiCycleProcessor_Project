@@ -1,0 +1,102 @@
+# Script test PARTIE 4 - ARM complet avec MAE corrigée
+# test_partie4_arm_complet.do
+
+quit -sim
+vlib work
+
+echo "=========================================="
+echo "    TEST PARTIE 4 - ARM COMPLET"
+echo "=========================================="
+
+# Compilation complète
+echo "=== COMPILATION COMPLETE ==="
+vcom -93 -work work ALU.vhd
+vcom -93 -work work RegisterBank.vhd
+vcom -93 -work work Mux2v1.vhd
+vcom -93 -work work Mux4v1.vhd
+vcom -93 -work work SignExtender.vhd
+vcom -93 -work work Reg32.vhd
+vcom -93 -work work Reg32_WrEn.vhd
+vcom -93 -work work VIC.vhd
+vcom -93 -work work DualPortRAM.vhd
+vcom -93 -work work DataPath.vhd
+vcom -93 -work work MAE.vhd
+vcom -93 -work work arm.vhd
+vcom -93 -work work test_partie4_arm_complet.vhd
+
+# Simulation ARM complet avec testbench
+echo "=== SIMULATION ARM COMPLET ==="
+vsim -t 1ns work.test_partie4_arm_complet
+
+# Configuration waveforms optimisée
+configure wave -namecolwidth 200
+configure wave -valuecolwidth 100
+
+# Signaux de contrôle du test
+add wave -divider "=== CONTROLE TEST ==="
+add wave -position insertpoint sim:/test_partie4_arm_complet/clk_tb
+add wave -position insertpoint sim:/test_partie4_arm_complet/rst_tb
+add wave -position insertpoint sim:/test_partie4_arm_complet/cycle_count
+
+# États MAE
+add wave -divider "=== ETATS MAE ==="
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/MAE1/current_state
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/MAE1/instr_courante
+
+# Instructions
+add wave -divider "=== INSTRUCTIONS ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie4_arm_complet/UUT/inst_mem
+add wave -position insertpoint -radix hexadecimal sim:/test_partie4_arm_complet/UUT/inst_reg
+
+# PC et mémoire
+add wave -divider "=== PC ET MEMOIRE ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie4_arm_complet/UUT/DataPath1/PC_out
+add wave -position insertpoint -radix hexadecimal sim:/test_partie4_arm_complet/UUT/DataPath1/mem_data_out
+
+# Signaux de contrôle critiques
+add wave -divider "=== CONTROLES CRITIQUES ==="
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/MemRdEn
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/IrWrEn
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/PCWrEn
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/RegWrEn
+
+# Registres importants
+add wave -divider "=== REGISTRES (R1, R2) ==="
+add wave -radix decimal -position insertpoint sim:/test_partie4_arm_complet/UUT/DataPath1/REG_FILE/Banc(1)
+add wave -radix decimal -position insertpoint sim:/test_partie4_arm_complet/UUT/DataPath1/REG_FILE/Banc(2)
+
+# Résultat et interruptions
+add wave -divider "=== RESULTAT ET INTERRUPTIONS ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie4_arm_complet/resultat_tb
+add wave -position insertpoint sim:/test_partie4_arm_complet/UUT/ResWrEn
+add wave -position insertpoint sim:/test_partie4_arm_complet/irq0_tb
+add wave -position insertpoint sim:/test_partie4_arm_complet/irq1_tb
+
+# Exécution
+echo "=== EXECUTION (3000ns) ==="
+run 3000ns
+
+wave zoom full
+
+echo "=========================================="
+echo "    RESULTATS PARTIE 4"
+echo "=========================================="
+echo ""
+echo "VERIFICATION DANS LA CONSOLE:"
+echo "1. 'SUCCES COMPLET: Resultat = 55 (0x37)'"
+echo "2. 'ARM MULTI-CYCLE FONCTIONNE PARFAITEMENT !'"
+echo "3. Tests interruptions IRQ0/IRQ1"
+echo ""
+echo "VERIFICATION DANS LES WAVEFORMS:"
+echo "1. current_state evolue normalement"
+echo "2. instr_courante change (MOV, ADDr, LDR, etc.)"
+echo "3. PC_out s'incremente: 0->1->2->3->..."
+echo "4. Banc(1) = 32 (0x20), Banc(2) = 55 final"
+echo "5. resultat_tb = 37 (55 decimal)"
+echo ""
+echo "SI SUCCES:"
+echo "? PROJET ARM MULTI-CYCLE TERMINE AVEC SUCCES"
+echo ""
+echo "SI ECHEC:"
+echo "? Utilisez les waveforms pour identifier le probleme"
+echo "=========================================="

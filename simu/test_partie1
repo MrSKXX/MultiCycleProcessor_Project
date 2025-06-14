@@ -1,0 +1,107 @@
+# Script de test complet PARTIE 1
+# test_partie1.do
+
+# Nettoyage
+quit -sim
+vlib work
+
+echo "=========================================="
+echo "    TEST PARTIE 1 - MODULES DE BASE"
+echo "=========================================="
+
+# Compilation de tous les modules de base
+echo "=== COMPILATION MODULES DE BASE ==="
+vcom -93 -work work ALU.vhd
+vcom -93 -work work RegisterBank.vhd
+vcom -93 -work work Mux2v1.vhd
+vcom -93 -work work Mux4v1.vhd
+vcom -93 -work work SignExtender.vhd
+vcom -93 -work work Reg32.vhd
+vcom -93 -work work Reg32_WrEn.vhd
+vcom -93 -work work VIC.vhd
+
+# Compilation du testbench
+echo "=== COMPILATION TESTBENCH ==="
+vcom -93 -work work test_partie1_complete.vhd
+
+# Simulation
+echo "=== LANCEMENT SIMULATION ==="
+vsim -t 1ns work.test_partie1_complete
+
+# Configuration waveforms (optionnel)
+configure wave -namecolwidth 200
+configure wave -valuecolwidth 100
+
+# Signaux principaux à observer
+add wave -divider "=== HORLOGE ET RESET ==="
+add wave -position insertpoint sim:/test_partie1_complete/clk_tb
+add wave -position insertpoint sim:/test_partie1_complete/rst_tb
+add wave -position insertpoint sim:/test_partie1_complete/test_ok
+
+add wave -divider "=== MUX4V1 ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux4_A
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux4_B
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux4_C
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux4_D
+add wave -position insertpoint sim:/test_partie1_complete/mux4_COM
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux4_S
+
+add wave -divider "=== MUX2V1 ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux2_A
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux2_B
+add wave -position insertpoint sim:/test_partie1_complete/mux2_COM
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/mux2_S
+
+add wave -divider "=== REG32_WREN ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/reg_wren_in
+add wave -position insertpoint sim:/test_partie1_complete/reg_wren_en
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/reg_wren_out
+
+add wave -divider "=== REG32 ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/reg_in
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/reg_out
+
+add wave -divider "=== VIC ==="
+add wave -position insertpoint sim:/test_partie1_complete/vic_irq0
+add wave -position insertpoint sim:/test_partie1_complete/vic_irq1
+add wave -position insertpoint sim:/test_partie1_complete/vic_irq_serv
+add wave -position insertpoint sim:/test_partie1_complete/vic_irq
+add wave -position insertpoint -radix hexadecimal sim:/test_partie1_complete/vic_pc
+
+# Exécution du test
+echo "=== EXECUTION TEST (300ns) ==="
+run 300ns
+
+# Zoom pour voir tous les signaux
+wave zoom full
+
+echo "=========================================="
+echo "    RESULTATS TEST PARTIE 1"
+echo "=========================================="
+echo ""
+echo "REGARDEZ LES RESULTATS DANS LA CONSOLE:"
+echo "- Chaque module doit afficher 'OK'"
+echo "- Aucune erreur 'ERREUR' ne doit apparaître"
+echo "- Le signal test_ok doit rester à '1'"
+echo ""
+echo "VERIFIEZ DANS LES WAVEFORMS:"
+echo "1. MUX4V1: Sortie change selon COM (AA,BB,CC,DD)"
+echo "2. MUX2V1: Sortie change selon COM (12345678, 87654321)"
+echo "3. REG32_WREN: Se charge seulement avec WrEn=1"
+echo "4. REG32: Se charge automatiquement"
+echo "5. VIC: IRQ s'active et VICPC = 0x9 ou 0x15"
+echo ""
+echo "=========================================="
+echo "SI TOUS LES TESTS PASSENT:"
+echo "? PARTIE 1 OK - Passez à PARTIE 2"
+echo ""
+echo "SI ECHECS:"
+echo "? Corrigez les modules défaillants avant"
+echo "   de passer à la suite"
+echo "=========================================="
+
+# Commandes utiles pour debug
+echo "=== COMMANDES DEBUG UTILES ==="
+echo "Pour relancer: restart -f; run 300ns"
+echo "Pour examiner un signal:"
+echo "examine sim:/test_partie1_complete/mux4_S"

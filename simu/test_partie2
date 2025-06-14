@@ -1,0 +1,109 @@
+# Script test PARTIE 2 - DataPath isolé
+# test_partie2.do
+
+quit -sim
+vlib work
+
+echo "=========================================="
+echo "    TEST PARTIE 2 - DATAPATH ISOLE"
+echo "=========================================="
+
+# Compilation modules requis
+echo "=== COMPILATION ==="
+vcom -93 -work work ALU.vhd
+vcom -93 -work work RegisterBank.vhd
+vcom -93 -work work Mux2v1.vhd
+vcom -93 -work work Mux4v1.vhd
+vcom -93 -work work SignExtender.vhd
+vcom -93 -work work Reg32.vhd
+vcom -93 -work work Reg32_WrEn.vhd
+vcom -93 -work work VIC.vhd
+vcom -93 -work work DualPortRAM.vhd
+vcom -93 -work work DataPath.vhd
+
+# Compilation testbench
+vcom -93 -work work test_partie2_datapath.vhd
+
+# Simulation
+echo "=== SIMULATION ==="
+vsim -t 1ns work.test_partie2_datapath
+
+# Configuration waveforms
+configure wave -namecolwidth 250
+configure wave -valuecolwidth 120
+
+# Signaux critiques
+add wave -divider "=== CONTROLE TEST ==="
+add wave -position insertpoint sim:/test_partie2_datapath/clk_tb
+add wave -position insertpoint sim:/test_partie2_datapath/rst_tb
+add wave -position insertpoint sim:/test_partie2_datapath/test_step
+
+add wave -divider "=== CONTROLE MEMOIRE ==="
+add wave -position insertpoint sim:/test_partie2_datapath/AdrSel_tb
+add wave -position insertpoint sim:/test_partie2_datapath/MemRdEn_tb
+add wave -position insertpoint sim:/test_partie2_datapath/IrWrEn_tb
+
+add wave -divider "=== PC ET ADRESSAGE ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/PC_out
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/mem_addr
+
+add wave -divider "=== MEMOIRE CRITIQUE ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/MEMORY/ram_block(0)
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/MEMORY/ram_block(1)
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/MEMORY/ram_block(2)
+
+add wave -divider "=== DONNEES INSTRUCTIONS ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/mem_data_out
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/Inst_Mem_tb
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/IR_out
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/Inst_Reg_tb
+
+add wave -divider "=== VIC ==="
+add wave -position insertpoint sim:/test_partie2_datapath/irq0_tb
+add wave -position insertpoint sim:/test_partie2_datapath/irq_tb
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/VICPC_out
+
+add wave -divider "=== ALU ET PC ==="
+add wave -position insertpoint sim:/test_partie2_datapath/PCWrEn_tb
+add wave -position insertpoint sim:/test_partie2_datapath/AluOP_tb
+add wave -position insertpoint -radix hexadecimal sim:/test_partie2_datapath/UUT/ALU_out
+
+# Exécution
+echo "=== EXECUTION (250ns) ==="
+run 250ns
+
+wave zoom full
+
+echo "=========================================="
+echo "    DIAGNOSTIC PARTIE 2"
+echo "=========================================="
+echo ""
+echo "VERIFIEZ DANS LA CONSOLE:"
+echo "1. Chaque étape doit se terminer par SUCCES ?"
+echo "2. Message final: 'PARTIE 2 REUSSIE'"
+echo ""
+echo "VERIFIEZ DANS LES WAVEFORMS:"
+echo "1. ram_block(0) = E3A01020 après reset"
+echo "2. mem_data_out = E3A01020 avec MemRdEn=1"  
+echo "3. Inst_Mem_tb = E3A01020 (pas 00000000)"
+echo "4. IR_out = E3A01020 après IrWrEn=1"
+echo "5. PC_out s'incrémente de 0 ? 1"
+echo ""
+echo "DIAGNOSTIC DES PROBLEMES:"
+echo "? Si Inst_Mem_tb = 00000000:"
+echo "   ? Problème lecture mémoire DualPortRAM"
+echo "? Si ram_block(0) = 00000000:"
+echo "   ? Problème initialisation mémoire"
+echo "? Si mem_data_out = rouge/X:"
+echo "   ? Problème timing ou signaux de contrôle"
+echo ""
+echo "=========================================="
+
+# Examiner les signaux critiques
+echo "=== EXAMENS AUTOMATIQUES ==="
+echo "examine sim:/test_partie2_datapath/UUT/MEMORY/ram_block(0)"
+examine sim:/test_partie2_datapath/UUT/MEMORY/ram_block(0)
+echo "examine sim:/test_partie2_datapath/Inst_Mem_tb"  
+examine sim:/test_partie2_datapath/Inst_Mem_tb
+echo "examine sim:/test_partie2_datapath/UUT/PC_out"
+examine sim:/test_partie2_datapath/UUT/PC_out

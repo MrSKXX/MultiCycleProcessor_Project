@@ -1,0 +1,83 @@
+# Script test PARTIE 3 avec timing correct
+# test_partie3_timing.do
+
+quit -sim
+vlib work
+
+echo "=========================================="
+echo "    TEST PARTIE 3 - TIMING CORRECT"
+echo "=========================================="
+
+# Compilation
+echo "=== COMPILATION ==="
+vcom -93 -work work MAE.vhd
+vcom -93 -work work MAE_testbench.vhd
+
+# Simulation
+echo "=== SIMULATION ==="
+vsim -t 1ns work.test_partie3_timing_fixed
+
+# Configuration waveforms
+configure wave -namecolwidth 250
+configure wave -valuecolwidth 120
+
+# Signaux essentiels
+add wave -divider "=== TIMING TEST ==="
+add wave -position insertpoint sim:/test_partie3_timing_fixed/clk_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/rst_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/test_step
+
+# États MAE
+add wave -divider "=== ETATS MAE ==="
+add wave -position insertpoint sim:/test_partie3_timing_fixed/UUT/current_state
+add wave -position insertpoint sim:/test_partie3_timing_fixed/UUT/instr_courante
+
+# Instructions
+add wave -divider "=== INSTRUCTIONS ==="
+add wave -position insertpoint -radix hexadecimal sim:/test_partie3_timing_fixed/inst_mem_tb
+add wave -position insertpoint -radix hexadecimal sim:/test_partie3_timing_fixed/inst_reg_tb
+
+# Signaux de contrôle critiques
+add wave -divider "=== CONTROLES CRITIQUES ==="
+add wave -position insertpoint sim:/test_partie3_timing_fixed/memRdEn_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/irWrEn_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/PCWrEn_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/RegWrEn_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/WSel_tb
+
+# ALU
+add wave -divider "=== ALU ==="
+add wave -position insertpoint sim:/test_partie3_timing_fixed/AluOP_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/AluSelB_tb
+
+# Mémoire
+add wave -divider "=== MEMOIRE ==="
+add wave -position insertpoint sim:/test_partie3_timing_fixed/memWrEn_tb
+add wave -position insertpoint sim:/test_partie3_timing_fixed/ResWrEn_tb
+
+# Exécution
+echo "=== EXECUTION (400ns) ==="
+run 400ns
+
+wave zoom full
+
+echo "=========================================="
+echo "    RESULTAT TEST TIMING"
+echo "=========================================="
+echo ""
+echo "ATTENDU DANS LA CONSOLE:"
+echo "- 'SUCCES' pour chaque étape"
+echo "- 'CONCLUSION: MAE fonctionne correctement !'"
+echo ""
+echo "ATTENDU DANS LES WAVEFORMS:"
+echo "1. current_state: E1 après reset"
+echo "2. Séquence: E1->E2->E7->E13->E1"
+echo "3. instr_courante: UNKNOWN->MOV->etc."
+echo "4. Signaux de contrôle aux bons moments"
+echo ""
+echo "Si ce test passe:"
+echo "? MAE fonctionne - Problème = intégration ARM"
+echo ""
+echo "Si échec persistant:"
+echo "? Problème fondamental dans MAE"
+echo "=========================================="
