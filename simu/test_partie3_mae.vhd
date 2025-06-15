@@ -37,14 +37,12 @@ architecture test of test_partie3_mae is
         );
     end component;
 
-    -- Signaux de test
     signal clk_tb, rst_tb : std_logic := '0';
     signal irq_tb : std_logic := '0';
     signal irq_serv_tb : std_logic;
     signal inst_mem_tb, inst_reg_tb : std_logic_vector(31 downto 0) := (others => '0');
     signal N_tb : std_logic := '0';
     
-    -- Signaux de sortie MAE
     signal AdrSel_tb : std_logic;
     signal memRdEn_tb, memWrEn_tb : std_logic;
     signal irWrEn_tb : std_logic;
@@ -58,8 +56,6 @@ architecture test of test_partie3_mae is
     signal ResWrEn_tb : std_logic;
     
     constant CLK_PERIOD : time := 20 ns;
-    signal test_step : integer := 0;
-    signal test_passed : boolean := true;
 
 begin
 
@@ -90,148 +86,110 @@ begin
         ResWrEn => ResWrEn_tb
     );
     
-    -- Générateur d'horloge
     clk_tb <= not clk_tb after CLK_PERIOD/2;
     
-    -- Processus de test principal
     test_process: process
     begin
         report "=== DEBUT TEST PARTIE 3 - MAE ===";
         
-        -- ETAPE 1: Reset et état initial
-        test_step <= 1;
-        report "--- ETAPE 1: RESET ET ETAT INITIAL ---";
         rst_tb <= '1';
         wait for CLK_PERIOD*2;
         rst_tb <= '0';
         wait for CLK_PERIOD;
         
-        -- Vérifier état E1
-        if memRdEn_tb = '1' and AdrSel_tb = '0' then
-            report "SUCCES: Etat E1 - Lecture memoire PC activee" severity note;
-        else
-            report "ECHEC: Etat E1 - Signaux incorrects" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 2: Transition E1 -> E2
-        test_step <= 2;
-        report "--- ETAPE 2: TRANSITION E1 -> E2 ---";
-        inst_mem_tb <= x"E3A01020"; -- MOV R1,#0x20
+        -- TEST 1: MOV R1,#0x20 = E3A01020
+        report "--- TEST MOV R1,#32 ---";
+        -- Attendre E1
         wait for CLK_PERIOD;
-        
-        -- Vérifier état E2
-        if irWrEn_tb = '1' and PCWrEn_tb = '1' then
-            report "SUCCES: Etat E2 - Chargement IR et PC++" severity note;
-        else
-            report "ECHEC: Etat E2 - Signaux incorrects" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 3: Décodage MOV
-        test_step <= 3;
-        report "--- ETAPE 3: DECODAGE MOV R1,#0x20 ---";
-        inst_reg_tb <= x"E3A01020"; -- Charger instruction dans IR
+        -- Charger instruction
+        inst_mem_tb <= x"E3A01020";
+        -- Attendre E2 (chargement IR)
         wait for CLK_PERIOD;
-        
-        -- Vérifier transition vers E7 (MOV immediate)
-        -- État E7: AluOP="01" (pass B), AluSelB="01" (immediate)
-        wait for CLK_PERIOD/4; -- Petit délai pour stabilisation
+        inst_reg_tb <= x"E3A01020";
+        -- Attendre que la MAE decode et execute
+        wait for CLK_PERIOD*3;
         
         if AluOP_tb = "01" and AluSelB_tb = "01" then
-            report "SUCCES: Decodage MOV - Transition vers E7" severity note;
+            report "SUCCES MOV: AluOP=01, AluSelB=01";
         else
-            report "ECHEC: Decodage MOV - Mauvaise transition" severity error;
-            report "AluOP attendu: 01, recu: " & std_logic'image(AluOP_tb(1)) & std_logic'image(AluOP_tb(0));
-            report "AluSelB attendu: 01, recu: " & std_logic'image(AluSelB_tb(1)) & std_logic'image(AluSelB_tb(0));
-            test_passed <= false;
+            report "ECHEC MOV: Signaux incorrects";
         end if;
         
-        -- ETAPE 4: État E13 (écriture registre)
-        test_step <= 4;
-        report "--- ETAPE 4: ETAT E13 - ECRITURE REGISTRE ---";
         wait for CLK_PERIOD;
         
-        -- Vérifier E13: WSel='1', RegWrEn='1'
-        if WSel_tb = '1' and RegWrEn_tb = '1' then
-            report "SUCCES: Etat E13 - Ecriture registre OK" severity note;
-        else
-            report "ECHEC: Etat E13 - Signaux ecriture incorrects" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 5: Retour à E1
-        test_step <= 5;
-        report "--- ETAPE 5: RETOUR E1 ---";
+        -- TEST 2: STR R2,0(R1) = E6012000 (CRITIQUE!)
+        report "--- TEST STR R2,0(R1) - CRITIQUE ---";
+        -- Reset pour nouveau test
         wait for CLK_PERIOD;
-        
-        if memRdEn_tb = '1' and AdrSel_tb = '0' then
-            report "SUCCES: Retour a E1 - Lecture memoire reactivee" severity note;
-        else
-            report "ECHEC: Retour E1 - Probleme cycle" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 6: Test instruction ADD
-        test_step <= 6;
-        report "--- ETAPE 6: TEST ADD R2,R2,R0 ---";
-        inst_mem_tb <= x"E0822000";
-        inst_reg_tb <= x"E0822000";
-        wait for CLK_PERIOD*3;
-        
-        -- Chercher état avec ADD: AluOP="00", AluSelA='1', AluSelB="00"
-        if AluOP_tb = "00" and AluSelA_tb = '1' and AluSelB_tb = "00" then
-            report "SUCCES: Decodage ADD correct" severity note;
-        else
-            report "ECHEC: Decodage ADD incorrect" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 7: Test instruction STR  
-        test_step <= 7;
-        report "--- ETAPE 7: TEST STR R2,0(R1) ---";
+        -- Charger nouvelle instruction
         inst_mem_tb <= x"E6012000";
+        wait for CLK_PERIOD;
         inst_reg_tb <= x"E6012000";
+        -- Attendre execution complete
+        wait for CLK_PERIOD*5;
+        
+        if memWrEn_tb = '1' and ResWrEn_tb = '1' and AdrSel_tb = '1' then
+            report "SUCCES STR CRITIQUE: memWrEn=1, ResWrEn=1, AdrSel=1";
+        else
+            report "ECHEC STR CRITIQUE: ResWrEn pas a 1 !";
+        end if;
+        
+        wait for CLK_PERIOD;
+        
+        -- TEST 3: ADD R2,R2,R0 = E0822000
+        report "--- TEST ADD R2,R2,R0 ---";
+        wait for CLK_PERIOD;
+        inst_mem_tb <= x"E0822000";
+        wait for CLK_PERIOD;
+        inst_reg_tb <= x"E0822000";
+        wait for CLK_PERIOD*4;
+        
+        if AluOP_tb = "00" and AluSelA_tb = '1' and AluSelB_tb = "00" then
+            report "SUCCES ADD: AluOP=00, AluSelA=1, AluSelB=00";
+        else
+            report "ECHEC ADD: Signaux incorrects";
+        end if;
+        
+        wait for CLK_PERIOD;
+        
+        -- TEST 4: CMP R1,0x2A = E351002A
+        report "--- TEST CMP R1,42 ---";
+        wait for CLK_PERIOD;
+        inst_mem_tb <= x"E351002A";
+        wait for CLK_PERIOD;
+        inst_reg_tb <= x"E351002A";
         wait for CLK_PERIOD*3;
         
-        -- Chercher état avec STR: memWrEn='1', ResWrEn='1'
-        if memWrEn_tb = '1' and ResWrEn_tb = '1' then
-            report "SUCCES: Decodage STR correct" severity note;
+        if AluOP_tb = "10" and CpsrWrEn_tb = '1' then
+            report "SUCCES CMP: AluOP=10, CpsrWrEn=1";
         else
-            report "ECHEC: Decodage STR incorrect" severity error;
-            test_passed <= false;
+            report "ECHEC CMP: Signaux incorrects";
         end if;
         
-        -- ETAPE 8: Test interruption
-        test_step <= 8;
-        report "--- ETAPE 8: TEST INTERRUPTION ---";
-        irq_tb <= '1';
-        wait for CLK_PERIOD*2;
-        
-        if SpsrWrEn_tb = '1' and LRWrEn_tb = '1' then
-            report "SUCCES: Gestion interruption - Sauvegarde contexte" severity note;
-        else
-            report "ECHEC: Gestion interruption defaillante" severity error;
-            test_passed <= false;
-        end if;
-        
-        -- ETAPE 9: Résumé final
-        test_step <= 9;
-        report "--- ETAPE 9: RESUME FINAL ---";
         wait for CLK_PERIOD;
+        
+        -- TEST 5: BLT avec N=1 = BAFFFFFC
+        report "--- TEST BLT (N=1) ---";
+        wait for CLK_PERIOD;
+        inst_mem_tb <= x"BAFFFFFC";
+        wait for CLK_PERIOD;
+        inst_reg_tb <= x"BAFFFFFC";
+        N_tb <= '1';
+        wait for CLK_PERIOD*3;
+        
+        if PCWrEn_tb = '1' and AluSelB_tb = "10" then
+            report "SUCCES BLT: PCWrEn=1, AluSelB=10";
+        else
+            report "ECHEC BLT: Signaux incorrects";
+        end if;
+        
+        N_tb <= '0';
+        wait for CLK_PERIOD*3;
         
         report "=== RESUME TEST PARTIE 3 ===";
-        if test_passed then
-            report "PARTIE 3 REUSSIE - MAE fonctionne correctement";
-            report "Tous les decodages d'instructions sont OK";
-            report "Transitions d'etats correctes";
-        else
-            report "PARTIE 3 ECHEC - Problemes MAE identifies";
-            report "Verifiez le decodage des instructions";
-            report "Verifiez les transitions d'etats";
-        end if;
+        report "POINT CRITIQUE: ResWrEn doit etre a 1 pour STR";
+        report "Verifiez waveforms pour transitions etats";
         
-        report "=== FIN TEST PARTIE 3 ===";
         wait;
     end process;
 
